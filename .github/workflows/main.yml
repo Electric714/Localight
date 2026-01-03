@@ -1,0 +1,107 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Optional: If you need a specific Xcode version, uncomment and set it.
+      # - name: Set up Xcode
+      #   uses: maxim-lobanov/setup-xcode@v1
+      #   with:
+      #     xcode-version: "16.2"
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve scheme name
+        id: scheme
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT="Localight.xcodeproj"
+
+          echo "Listing schemes in ${PROJECT}..."
+          xcodebuild -list -project "$PROJECT"
+
+          # Grab first scheme listed after "Schemes:"
+          SCHEME=$(xcodebuild -list -project "$PROJECT" \
+            | awk 'BEGIN{found=0} /^Schemes:/{found=1; next} found && NF {print $1; exit}')
+
+          if [ -z "${SCHEME:-}" ]; then
+            echo "Could not auto-detect scheme. Ensure the scheme is shared in Xcode."
+            exit 1
+          fi
+
+          echo "Detected scheme: $SCHEME"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+
+      - name: Build archive (no code signing)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT="Localight.xcodeproj"
+          SCHEME="${{ steps.scheme.outputs.scheme }}"
+          CONFIG="Release"
+          ARCHIVE_PATH="$PWD/build/${SCHEME}.xcarchive"
+
+          mkdir -p "$PWD/build"
+
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIG" \
+            -sdk iphoneos \
+            -archivePath "$ARCHIVE_PATH" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCHEME="${{ steps.scheme.outputs.scheme }}"
+          ARCHIVE_PATH="$PWD/build/${SCHEME}.xcarchive"
+          APP_DIR="$ARCHIVE_PATH/Products/Applications"
+
+          echo "Looking for .app in: $APP_DIR"
+          APP_PATH=$(find "$APP_DIR" -maxdepth 1 -type d -name "*.app" | head -n 1)
+
+          if [ -z "${APP_PATH:-}" ]; then
+            echo "No .app found in archive. Build likely failed earlier."
+            exit 1
+          fi
+
+          echo "Found app: $APP_PATH"
+
+          OUT_DIR="$PWD/dist"
+          PAYLOAD_DIR="$OUT_DIR/Payload"
+          mkdir -p "$PAYLOAD_DIR"
+
+          cp -R "$APP_PATH" "$PAYLOAD_DIR/"
+
+          IPA_NAME="${SCHEME}-unsigned.ipa"
+          (cd "$OUT_DIR" && /usr/bin/zip -qry "../$IPA_NAME" Payload)
+
+          echo "Created unsigned IPA: $PWD/$IPA_NAME"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Localight-unsigned-ipa
+          path: "*.ipa"
+          if-no-files-found: error
