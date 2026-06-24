@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-/// The main entry point, selecting the iOS 26 or iOS 27 interface.
 @main
 struct LocalightApp: App {
     var body: some Scene {
@@ -15,7 +14,9 @@ struct LocalightApp: App {
             if #available(iOS 27.0, *) {
                 ContentView_27()
             } else {
-                ContentView_26()
+                // Fallback for iOS 26 (ContentView_26 was removed)
+                // You can put a simple fallback view here if needed
+                Text("This app requires iOS 27 or later")
             }
         }
     }
