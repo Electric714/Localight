@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  ContentView_26.swift
 //  Localight
 //
 //  Created by Timo Köthe on 06.07.25.
@@ -8,18 +8,11 @@
 import SwiftUI
 import FoundationModels
 
-/// The root view of the app.
+/// The iOS 26 app root view.
 ///
-/// `ContentView` checks the availability of the local system language model
-/// and displays the appropriate screen:
-/// - If the model is available, the chat interface (`ChatView`) is shown.
-/// - If unavailable, a `ContentUnavailableView` is presented with a reason,
-///   such as device incompatibility, disabled Apple Intelligence,
-///   the model still preparing, or other issues.
-///
-/// This view ensures that users always receive clear feedback about the model’s state
-/// before interacting with the chat interface.
-struct ContentView: View {
+/// Displays the chat interface when the on-device language model is available.
+/// Otherwise, it presents a fallback screen explaining why the model cannot be used.
+struct ContentView_26: View {
     // Create a reference to the system language model.
     private var model = SystemLanguageModel.default
     
@@ -27,12 +20,10 @@ struct ContentView: View {
         // Checks the local model's availability
         switch model.availability {
         case .available:
-            TabView {
-                ChatView()
-                    .tabItem {
-                        Label("Chat", systemImage: "message")
-                    }
-            }
+            ChatView_26()
+                .tabItem {
+                    Label("Chat", systemImage: "message")
+                }
         case .unavailable(.deviceNotEligible):
             ContentUnavailableView("This device is not supported.", systemImage: "nosign")
         case .unavailable(.appleIntelligenceNotEnabled):
@@ -46,5 +37,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView_26()
 }

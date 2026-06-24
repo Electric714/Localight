@@ -7,18 +7,16 @@
 
 import SwiftUI
 
-/// The main application entry point.
-///
-/// `LocalightApp` defines the app’s lifecycle using the SwiftUI `App` protocol.
-/// It creates a single `WindowGroup` scene that displays the `ContentView`
-/// as the root view of the application.
-///
-/// This is where the app launches and sets up its initial UI.
+/// The main entry point, selecting the iOS 26 or iOS 27 interface.
 @main
 struct LocalightApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if #available(iOS 27.0, *) {
+                ContentView_27()
+            } else {
+                ContentView_26()
+            }
         }
     }
 }
