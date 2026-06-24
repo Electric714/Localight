@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-unsigned-ipa:
-    runs-on: macos-15
+    runs-on: macos-26
 
     env:
       PROJECT: Localight.xcodeproj
@@ -32,7 +32,7 @@ jobs:
           echo "---- xcodebuild -list ----"
           xcodebuild -list -project "$PROJECT" 2>&1 | tee /tmp/xcodebuild_list.txt
 
-          if ! grep -qE "^[[:space:]]*$SCHEME[[:space:]]*$" /tmp/xcodebuild_list.txt; then
+          if ! grep -qE "^[[:space:]]*$SCHEME[[:space:]]*$$" /tmp/xcodebuild_list.txt; then
             echo "ERROR: Scheme '$SCHEME' not found. Make sure it's shared in Xcode."
             exit 1
           fi
