@@ -30,7 +30,7 @@ jobs:
           echo "---- xcodebuild -list ----"
           xcodebuild -list -project "$PROJECT"
 
-          if ! xcodebuild -list -project "$PROJECT" | grep -qE "^[[:space:]]*$SCHEME[[:space:]]*$"; then
+          if ! xcodebuild -list -project "$PROJECT" | grep -Fxq "$SCHEME"; then
             echo "ERROR: Scheme '$SCHEME' not found. Make sure it's shared in Xcode."
             exit 1
           fi
