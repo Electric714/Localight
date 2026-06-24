@@ -23,27 +23,24 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Verify scheme exists (and print list)
-        shell: bash
+      - name: Verify scheme exists
         run: |
-          set -euo pipefail
           echo "Project: $PROJECT"
           echo "Expected scheme: $SCHEME"
           echo "---- xcodebuild -list ----"
-          xcodebuild -list -project "$PROJECT" 2>&1 | tee /tmp/xcodebuild_list.txt
+          xcodebuild -list -project "$PROJECT"
 
-          if ! grep -qE "^[[:space:]]*$SCHEME[[:space:]]*$$" /tmp/xcodebuild_list.txt; then
+          if ! xcodebuild -list -project "$PROJECT" | grep -qE "^[[:space:]]*$SCHEME[[:space:]]*$"; then
             echo "ERROR: Scheme '$SCHEME' not found. Make sure it's shared in Xcode."
             exit 1
           fi
+          echo "✓ Scheme '$SCHEME' found."
 
       - name: Build archive (no code signing)
-        shell: bash
         run: |
           set -euo pipefail
           ARCHIVE_PATH="$PWD/build/${SCHEME}.xcarchive"
           mkdir -p "$PWD/build"
-
           xcodebuild \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -58,29 +55,22 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER=""
 
       - name: Package unsigned IPA
-        shell: bash
         run: |
           set -euo pipefail
           ARCHIVE_PATH="$PWD/build/${SCHEME}.xcarchive"
           APP_DIR="$ARCHIVE_PATH/Products/Applications"
-
           echo "Looking for .app in: $APP_DIR"
           APP_PATH=$(find "$APP_DIR" -maxdepth 1 -type d -name "*.app" | head -n 1)
-
           if [ -z "${APP_PATH:-}" ]; then
             echo "No .app found in archive. Build likely failed earlier."
             exit 1
           fi
-
           OUT_DIR="$PWD/dist"
           PAYLOAD_DIR="$OUT_DIR/Payload"
           mkdir -p "$PAYLOAD_DIR"
-
           cp -R "$APP_PATH" "$PAYLOAD_DIR/"
-
           IPA_NAME="${SCHEME}-unsigned.ipa"
           (cd "$OUT_DIR" && /usr/bin/zip -qry "../$IPA_NAME" Payload)
-
           echo "Created unsigned IPA: $PWD/$IPA_NAME"
 
       - name: Upload IPA artifact
