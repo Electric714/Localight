@@ -8,8 +8,9 @@
 import Foundation
 import UIKit
 
+// TODO: Remove this compile-time guard once GitHub Actions runner is updated to Xcode 27 / Apple Silicon.
 #if compiler(>=6.2)
-// MARK: - iOS 27+ Implementation (requires Xcode 27+)
+// MARK: - Full iOS 27+ Implementation (Xcode 27+)
 import FoundationModels
 
 @Observable
@@ -165,7 +166,9 @@ class ChatViewModel_27 {
         inputText = ""
         attachedImage = nil
 
-        messages[messageIndex].tokenCount = try? await SystemLanguageModel.default.tokenCount(for: prompt)
+        if let tokenCount = try? await SystemLanguageModel.default.tokenCount(for: prompt) {
+            messages[messageIndex].tokenCount = tokenCount
+        }
         return image
     }
 
@@ -200,7 +203,7 @@ class ChatViewModel_27 {
         if let languageModelError = error as? LanguageModelError {
             switch languageModelError {
             case .contextSizeExceeded(_):
-                return ("Context window exceeded", "The current chat is too long for the on-device model.")
+                return ("Context window exceeded", "The current chat is too long for the on-device model. Clear the chat or shorten the prompt.")
             case .rateLimited(_):
                 return ("Model is rate limited", "The session is temporarily rate limited.")
             case .refusal(_):
@@ -230,6 +233,7 @@ class ChatViewModel_27 {
 
         let newInputTokens = inputTokens - accumulatedInputTokens
         let newOutputTokens = outputTokens - accumulatedOutputTokens
+
         accumulatedInputTokens = inputTokens
         accumulatedOutputTokens = outputTokens
 
@@ -243,8 +247,8 @@ class ChatViewModel_27 {
 }
 
 #else
-// MARK: - Fallback Implementation for older Xcode (Xcode 26.x)
-// Provides basic functionality without iOS 27-only APIs
+// TODO: Remove this compile-time guard once GitHub Actions runner is updated to Xcode 27 / Apple Silicon.
+// MARK: - Safe Fallback for Xcode 26.5 and older
 
 @Observable
 class ChatViewModel_27 {
@@ -276,16 +280,18 @@ class ChatViewModel_27 {
     }
 
     func getResponse() async {
-        // Basic fallback - just echo for now
         isResponding = true
-        let userText = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        messages.append(Message_27(text: userText, sender: .user))
+        let userMessage = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !userMessage.isEmpty {
+            messages.append(Message_27(text: userMessage, sender: .user, image: attachedImage))
+        }
         inputText = ""
         attachedImage = nil
 
-        // Simulate response
-        try? await Task.sleep(for: .seconds(1))
-        messages.append(Message_27(text: "[iOS 27 features require newer Xcode]", sender: .model))
+        // Graceful fallback response
+        try? await Task.sleep(for: .seconds(0.8))
+        messages.append(Message_27(text: "[Advanced AI features require Xcode 27+ to build. This is a basic fallback.]", sender: .model))
+
         isResponding = false
     }
 
@@ -318,6 +324,8 @@ class ChatViewModel_27 {
         isResponding = false
         isStreaming = false
         showsGenerationError = false
+        generationErrorTitle = ""
+        generationErrorMessage = ""
         messages = []
         streamingResponse = ""
         contextTokensUsed = 0
