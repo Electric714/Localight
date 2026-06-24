@@ -283,11 +283,15 @@ import UIKit
 
     @available(iOS 27.0, *)
     private func updateTokenUsage(for messageIndex: Int?) {
-        updateTokenUsage(for: messageIndex, using: session.usage)
+        // Access .usage only inside the availability check to avoid compile errors on older SDKs
+        if #available(iOS 27.0, *) {
+            let currentUsage = session.usage
+            updateTokenUsageInternal(for: messageIndex, using: currentUsage)
+        }
     }
 
     @available(iOS 27.0, *)
-    private func updateTokenUsage(
+    private func updateTokenUsageInternal(
         for messageIndex: Int?,
         using usage: LanguageModelSession.Usage
     ) {
